@@ -6,6 +6,7 @@ acceptance, a proposed 'accept' is always a recommendation for a named
 human risk owner to sign off on separately.
 """
 from anthropic import Anthropic
+from pydantic import ValidationError
 
 from access_review.models import AccessRecord, Classification, ReviewVerdict
 
@@ -59,7 +60,12 @@ class RiskAgent:
     ) -> RiskScore:
         response = self._client.messages.create(
             model=model,
-            max_tokens=300,
+            # Generous headroom: `required` in the tool schema is a strong
+            # hint to the model, not a hard guarantee from the API. A tight
+            # budget that truncates mid-JSON silently drops whichever field
+            # the model was generating last (here, `rationale`, last in the
+            # schema), exactly the failure mode this guards against.
+            max_tokens=1024,
             system=build_system_prompt(ROLE_INSTRUCTION),
             tools=[_SCORE_TOOL],
             tool_choice={"type": "tool", "name": "score_risk"},
@@ -78,4 +84,11 @@ class RiskAgent:
             ],
         )
         tool_use = next(block for block in response.content if block.type == "tool_use")
-        return RiskScore(**tool_use.input)
+        try:
+            return RiskScore(**tool_use.input)
+        except ValidationError as e:
+            raise ValueError(
+                f"Model returned an incomplete risk score for "
+                f"{record.user_id} (stop_reason={response.stop_reason!r}): "
+                f"{tool_use.input!r}"
+            ) from e

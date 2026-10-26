@@ -18,6 +18,7 @@ import random
 from typing import Optional
 
 from anthropic import Anthropic
+from pydantic import ValidationError
 
 from access_review.models import AccessRecord, Classification
 from access_review.rules import evaluate
@@ -117,7 +118,10 @@ class AuditAgent:
     def _classify_independently(self, record: AccessRecord, model: str) -> Classification:
         response = self._client.messages.create(
             model=model,
-            max_tokens=300,
+            # See the matching comment in access_review/classify.py: the
+            # same truncation risk applies here, and this schema shares
+            # the same trailing `rationale` field.
+            max_tokens=1024,
             system=build_system_prompt(ROLE_INSTRUCTION),
             tools=[_CLASSIFY_TOOL],
             tool_choice={"type": "tool", "name": "classify_access"},
@@ -133,4 +137,11 @@ class AuditAgent:
             ],
         )
         tool_use = next(block for block in response.content if block.type == "tool_use")
-        return Classification(**tool_use.input)
+        try:
+            return Classification(**tool_use.input)
+        except ValidationError as e:
+            raise ValueError(
+                f"Model returned an incomplete independent classification "
+                f"for {record.user_id} (stop_reason={response.stop_reason!r}): "
+                f"{tool_use.input!r}"
+            ) from e
