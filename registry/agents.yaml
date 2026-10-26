@@ -1,0 +1,56 @@
+# The agent registry: per the Standard, "every deployed agent has a
+# registry entry before it acts: a named human owner, its purpose, its
+# autonomy level, and the systems and data it may touch. An agent not
+# in the registry is a shadow agent."
+#
+# This file is documentation today, not yet an enforced runtime gate,
+# the code does not currently refuse to run an agent missing from here.
+# That's a real gap, not a design choice, and the natural next step
+# before any of this touches a live cloud account rather than sample
+# data.
+
+agents:
+  - id: compliance-agent-v1
+    role: compliance
+    owner: "Ben Johns (Compliance lead)"
+    purpose: >
+      Execute control-testing use cases (starting with User Access
+      Review) and surface flagged findings for human review.
+    autonomy_level: 2 # Automate: agent runs the work, human approves before effect
+    scopes:
+      - "read: access export data"
+      - "call: classification model"
+      - "write: run logs"
+    line_of_defence: first-or-second # depends on who deploys it
+
+  - id: risk-agent-v1
+    role: risk
+    owner: "Ben Johns (Risk lead)"
+    purpose: >
+      Score likelihood and impact of Compliance's flagged findings and
+      propose a treatment. Never finalises risk acceptance.
+    autonomy_level: 1 # Assist: drafts and suggests, human owns the register entry
+    scopes:
+      - "read: compliance findings"
+      - "call: scoring model"
+      - "write: proposed risk register entries"
+    line_of_defence: second
+
+  - id: audit-agent-v1
+    role: audit
+    owner: "Ben Johns (Internal Audit)"
+    purpose: >
+      Independently re-sample and re-classify a subset of Compliance's
+      reviewed records (flagged and not-flagged), flagging any
+      discrepancy with the recorded verdict.
+    autonomy_level: 3 # Supervised autonomy: acts, humans monitor and audit after the fact
+    scopes:
+      - "read: compliance findings and raw input"
+      - "call: independent classification model"
+      - "write: audit sample reports"
+    line_of_defence: third
+    independence_note: >
+      Must never share an owner, a process, or a decision code path
+      with compliance-agent-v1. Enforced in code today by audit_agent.py
+      never importing compliance_agent.py and defining its own tool
+      schema rather than reusing classify.py's.
