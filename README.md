@@ -25,15 +25,35 @@ The independence the Standard requires between Compliance and Audit is structura
 ## Running it
 
 ```bash
-pip install -r requirements.txt
-export ANTHROPIC_API_KEY=your-key-here
+git clone https://github.com/benkanejohns/agentic-grc-team.git
+cd agentic-grc-team
 
-python run_team.py --input sample_data.csv
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY=your-key-here   # Windows: set ANTHROPIC_API_KEY=your-key-here
+
+curl -O https://raw.githubusercontent.com/benkanejohns/agentic-grc-access-review/main/sample_data/aws_iam_sample.csv
+
+python run_team.py --input aws_iam_sample.csv
 ```
 
-(Sample data lives in [agentic-grc-access-review](https://github.com/benkanejohns/agentic-grc-access-review/blob/main/sample_data/aws_iam_sample.csv); download it or point `--input` at your own AWS IAM credential-report-shaped export.)
+Or point `--input` at your own AWS IAM credential-report-shaped export instead of the sample file.
 
-Output: Compliance's flagged findings and run log, Risk's likelihood/impact score and proposed treatment for each one, and Audit's independent re-classification of a random sample, flagged and not, with any discrepancy from Compliance's recorded verdict called out by name.
+**Flags:**
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--input` | required | Path to the access export file |
+| `--use-case` | `user_access_review` | Only one exists today |
+| `--model` | `claude-sonnet-5` | Model every agent calls |
+| `--audit-sample-size` | `5` | How many records Audit independently re-classifies |
+| `--audit-seed` | none | Fix it for a reproducible sample across runs |
+
+**What it costs to run once:** against the 16-row sample file, Compliance makes 16 model calls (one per record), Risk makes one per flagged finding (up to 8 more), and Audit makes 5 more by default, around 30 calls total. All short, tool-use-only calls (a few hundred tokens each), not expensive, but worth knowing before pointing `--input` at a much larger real export.
+
+Output: Compliance's flagged findings and run log (in `runs/`), Risk's likelihood/impact score and proposed treatment for each one, and Audit's independent re-classification of a random sample, flagged and not, with any discrepancy from Compliance's recorded verdict called out by name.
 
 ## Honest limitations
 
