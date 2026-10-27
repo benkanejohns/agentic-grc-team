@@ -30,12 +30,22 @@ def main() -> None:
     )
     parser.add_argument("--input", required=True, help="Path to the export file")
     parser.add_argument("--model", default="claude-sonnet-5")
-    parser.add_argument("--audit-sample-size", type=int, default=5)
+    parser.add_argument(
+        "--audit-sample-size",
+        type=int,
+        default=None,
+        help=(
+            "Audits the full population by default (see the Standard's "
+            "'Audit coverage: exhaustive by default'). Pass a number here "
+            "to deliberately reduce coverage for cost or latency at "
+            "genuine scale, an explicit opt-in, not the default."
+        ),
+    )
     parser.add_argument(
         "--audit-seed",
         type=int,
         default=None,
-        help="Fix the audit sample for a reproducible run",
+        help="Fix the audit sample for a reproducible run (only relevant with --audit-sample-size)",
     )
     args = parser.parse_args()
 
@@ -60,10 +70,15 @@ def main() -> None:
     print()
 
     audit = AuditAgent()
-    print(
-        f"=== Audit agent ({audit.registry_id}): independently re-sampling "
-        f"{args.audit_sample_size} records ==="
-    )
+    if args.audit_sample_size is None:
+        coverage = f"independently re-classifying the full population ({len(results)} records)"
+    else:
+        coverage = (
+            f"independently re-classifying a REDUCED sample of "
+            f"{min(args.audit_sample_size, len(results))}/{len(results)} records "
+            f"(coverage reduced via --audit-sample-size, not the default)"
+        )
+    print(f"=== Audit agent ({audit.registry_id}): {coverage} ===")
     audit_rows = audit.sample(
         results,
         sample_size=args.audit_sample_size,

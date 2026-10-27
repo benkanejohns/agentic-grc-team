@@ -8,7 +8,7 @@ Three agents, Compliance, Risk, and Audit, built to [the Agentic GRC Standard](h
 |---|---|---|---|
 | **Compliance** | operates | Executes control-testing use cases (today: [User Access Review](https://github.com/benkanejohns/agentic-grc-access-review)) | Decide a finding is accepted |
 | **Risk** | prioritises | Scores likelihood/impact of what Compliance flagged, proposes a treatment | Finalise a risk acceptance, a human risk owner signs off |
-| **Audit** | verifies | Independently re-samples and re-classifies a subset of *all* records, flagged and not, reports any discrepancy | Import or call anything Compliance's module defines |
+| **Audit** | verifies | Independently re-classifies the full population by default (flagged and not), reports any discrepancy | Import or call anything Compliance's module defines; sample instead of auditing everything, without being told to |
 
 Registry entries, with owner, purpose, autonomy level, and scope, live in [`registry/agents.yaml`](./registry/agents.yaml).
 
@@ -48,12 +48,12 @@ Or point `--input` at your own AWS IAM credential-report-shaped export instead o
 | `--input` | required | Path to the access export file |
 | `--use-case` | `user_access_review` | Only one exists today |
 | `--model` | `claude-sonnet-5` | Model every agent calls |
-| `--audit-sample-size` | `5` | How many records Audit independently re-classifies |
-| `--audit-seed` | none | Fix it for a reproducible sample across runs |
+| `--audit-sample-size` | full population | Deliberately reduce how many records Audit independently re-classifies, an opt-in reduction for cost or latency at genuine scale, not the default. See the Standard's "Audit coverage: exhaustive by default." |
+| `--audit-seed` | none | Only relevant alongside `--audit-sample-size`: fix the reduced sample for a reproducible run |
 
-**What it costs to run once:** against the 16-row sample file, Compliance makes 16 model calls (one per record), Risk makes one per flagged finding (up to 8 more), and Audit makes 5 more by default, around 30 calls total. All short, tool-use-only calls (a few hundred tokens each), not expensive, but worth knowing before pointing `--input` at a much larger real export.
+**What it costs to run once:** against the 16-row sample file, Compliance makes 16 model calls (one per record), Risk makes one per flagged finding (up to 8 more), and Audit, auditing the full population by default, makes another 16, around 40 calls total. All short, tool-use-only calls (a few hundred tokens each), not expensive at this size, but worth knowing before pointing `--input` at a much larger real export, exhaustive audit scales with population size, see the Standard's guidance on right-sizing the model for this rather than reducing coverage.
 
-Output: Compliance's flagged findings and run log (in `runs/`), Risk's likelihood/impact score and proposed treatment for each one, and Audit's independent re-classification of a random sample, flagged and not, with any discrepancy from Compliance's recorded verdict called out by name.
+Output: Compliance's flagged findings and run log (in `runs/`), Risk's likelihood/impact score and proposed treatment for each one, and Audit's independent re-classification of the full population by default (flagged and not), with any discrepancy from Compliance's recorded verdict called out by name.
 
 ## Honest limitations
 

@@ -142,6 +142,12 @@ There is no Level 4. Un-audited, unbounded autonomy is not a maturity stage; it 
 - **Governance stays out of operations**: appetite and accountability sit above individual decisions.
 - **You never audit yourself**: you must not operate a control and provide assurance over it, and you never verify your own actions or evidence. Verification always crosses an independence boundary: a different agent under a different owner, or a human.
 
+### Audit coverage: exhaustive by default
+
+Audit sampling exists in human practice because auditor time is the scarce resource. It is a cost artifact, not an inherent property of what audit is. An agent's marginal cost per record is a fraction of a cent and a few seconds, not an hour of someone's time, so the constraint that justified sampling mostly does not carry over. Audit defaults to the full population, not a statistical sample.
+
+If cost or latency at genuine scale seems to argue for sampling, right-size the model before you reach for it. Classification against a closed taxonomy (Principle 2) does not require a frontier model: open-weight, self-hosted models sized to this narrow task remove both the per-call cost and the external rate limits that make exhaustive audit impractical at a hosted frontier model's price point and throughput. Only after that genuinely isn't enough should coverage be reduced, and when it is, the reduction must be stated and logged explicitly. A silently-inherited sample size is a sampling decision nobody actually made.
+
 ### Glossary
 
 | Term | Meaning |

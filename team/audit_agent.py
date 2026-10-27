@@ -72,16 +72,29 @@ class AuditAgent:
     def sample(
         self,
         results: list,
-        sample_size: int = 5,
+        sample_size: Optional[int] = None,
         model: str = "claude-sonnet-5",
         seed: Optional[int] = None,
     ):
-        """Samples from *all* of Compliance's results, flagged and
-        not-flagged alike, sampling only the flagged rows would miss
-        false negatives, exactly the gap Compliance's own findings
-        can't see by definition."""
-        rng = random.Random(seed)
-        sampled = rng.sample(results, k=min(sample_size, len(results)))
+        """Audits the full population by default, per the Standard's
+        'exhaustive by default' guidance: sampling is a human-auditor-cost
+        artifact that doesn't transfer to an agent whose marginal cost per
+        record is a fraction of a cent. Pass `sample_size` to deliberately
+        reduce coverage for cost or latency at genuine scale, this is an
+        opt-in reduction, not the default, and callers should log when
+        they use it so the reduced coverage is a stated fact, not a
+        silent assumption.
+
+        Sampling, when used, still draws from *all* of Compliance's
+        results, flagged and not-flagged alike: sampling only the flagged
+        rows would miss false negatives, exactly the gap Compliance's own
+        findings can't see by definition.
+        """
+        if sample_size is None:
+            sampled = list(results)
+        else:
+            rng = random.Random(seed)
+            sampled = rng.sample(results, k=min(sample_size, len(results)))
 
         audit_rows = []
         for record, compliance_classification, compliance_verdict in sampled:
