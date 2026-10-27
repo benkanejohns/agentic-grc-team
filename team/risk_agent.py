@@ -38,7 +38,14 @@ _SCORE_TOOL = {
                 "type": "string",
                 "enum": ["mitigate", "transfer", "avoid", "accept"],
             },
-            "rationale": {"type": "string"},
+            "rationale": {
+                "type": "string",
+                "description": (
+                    "One or two sentences explaining the score and the "
+                    "treatment, not a full writeup, this gets read in a "
+                    "scannable report, not an essay."
+                ),
+            },
         },
         "required": ["likelihood", "impact", "proposed_treatment", "rationale"],
     },

@@ -53,7 +53,10 @@ _CLASSIFY_TOOL = {
                 "type": "string",
                 "enum": ["appropriate", "mismatch", "insufficient-info"],
             },
-            "rationale": {"type": "string"},
+            "rationale": {
+                "type": "string",
+                "description": "One sentence explaining both classifications.",
+            },
         },
         "required": ["privilege_level", "department_fit", "rationale"],
     },
