@@ -21,6 +21,7 @@ from anthropic import Anthropic
 from pydantic import ValidationError
 
 from access_review.models import AccessRecord, Classification
+from access_review.policy import PolicyControl
 from access_review.rules import evaluate
 
 from .models import AuditSampleResult
@@ -72,6 +73,7 @@ class AuditAgent:
     def sample(
         self,
         results: list,
+        policy: list[PolicyControl],
         sample_size: Optional[int] = None,
         model: str = "claude-sonnet-5",
         seed: Optional[int] = None,
@@ -99,7 +101,7 @@ class AuditAgent:
         audit_rows = []
         for record, compliance_classification, compliance_verdict in sampled:
             independent = self._classify_independently(record, model)
-            independent_verdict = evaluate(record, independent)
+            independent_verdict = evaluate(record, independent, policy)
             agrees = (
                 independent.privilege_level == compliance_classification.privilege_level
                 and independent.department_fit == compliance_classification.department_fit

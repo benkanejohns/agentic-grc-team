@@ -9,6 +9,7 @@ from anthropic import Anthropic
 from pydantic import ValidationError
 
 from access_review.models import AccessRecord, Classification, ReviewVerdict
+from access_review.policy import PolicyControl
 
 from .models import RiskScore
 from .standard_loader import build_system_prompt
@@ -16,8 +17,11 @@ from .standard_loader import build_system_prompt
 ROLE_INSTRUCTION = (
     "You are the Risk agent on a GRC agent team operating under the "
     "Agentic GRC Standard above. You receive findings the Compliance "
-    "agent has already flagged. Score likelihood and impact on a 1-5 "
-    "scale and propose a treatment. You do not decide whether a risk is "
+    "agent has already flagged, along with the specific governing policy "
+    "controls Compliance tested against. Score likelihood and impact on "
+    "a 1-5 scale and propose a treatment, citing the relevant policy "
+    "control ID(s) in your rationale rather than reasoning from generic "
+    "security judgement alone. You do not decide whether a risk is "
     "accepted, you propose a treatment; a named human risk owner signs "
     "off on acceptance separately."
 )
@@ -63,8 +67,12 @@ class RiskAgent:
         record: AccessRecord,
         classification: Classification,
         verdict: ReviewVerdict,
+        policy: list[PolicyControl],
         model: str = "claude-sonnet-5",
     ) -> RiskScore:
+        policy_text = "\n".join(
+            f"- {c.control_id} ({c.title}): {c.text}" for c in policy
+        )
         response = self._client.messages.create(
             model=model,
             # Generous headroom: `required` in the tool schema is a strong
@@ -80,12 +88,14 @@ class RiskAgent:
                 {
                     "role": "user",
                     "content": (
+                        f"Governing policy controls:\n{policy_text}\n\n"
                         f"User: {record.display_name}\n"
                         f"Role/policy: {record.role_or_policy}\n"
                         f"Privilege level: {classification.privilege_level.value}\n"
                         f"Department fit: {classification.department_fit.value}\n"
                         f"Flag reasons: {'; '.join(verdict.reasons)}\n"
-                        "Score this finding."
+                        "Score this finding. Cite the relevant policy control "
+                        "ID(s) in your rationale."
                     ),
                 }
             ],
